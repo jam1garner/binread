@@ -117,55 +117,50 @@ impl<C: Copy + 'static, B: BinRead<Args = C>> BinRead for Vec<B> {
     }
 }
 
-macro_rules! binread_array_impl {
-    ($($size:literal),*$(,)?) => {
-        $(
-            impl<C: Copy + 'static, B: BinRead<Args = C> + Default> BinRead for [B; $size] {
-                type Args = B::Args;
+impl<C: Copy + 'static, B: BinRead<Args = C>, const N: usize> BinRead for [B; N] {
+    type Args = B::Args;
 
-                fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: Self::Args) -> BinResult<Self> {
-                    #[cfg(feature = "debug_template")]
-                    {
-                        let pos = reader.seek(SeekFrom::Current(0))?;
-                        let type_name = core::any::type_name::<B>().rsplitn(1, "::").nth(0).unwrap();
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        options: &ReadOptions,
+        args: Self::Args,
+    ) -> BinResult<Self> {
+        #[cfg(feature = "debug_template")]
+        {
+            let pos = reader.seek(SeekFrom::Current(0))?;
+            let type_name = core::any::type_name::<B>().rsplitn(1, "::").nth(0).unwrap();
 
-                        if let Some(name) = options.variable_name {
-                            binary_template::write_vec_named(
-                                options.endian, pos, type_name, $size, name
-                            );
-                        } else {
-                            binary_template::write_vec(options.endian, pos, type_name, $size);
-                        }
-                    }
-
-                    #[cfg(feature = "debug_template")]
-                    let options = &ReadOptions {
-                        dont_output_to_template: true,
-                        ..*options
-                    };
-
-                    let mut arr: [B; $size] = Default::default();
-                    for elem in arr.iter_mut() {
-                        *elem = BinRead::read_options(reader, options, args)?;
-                    }
-                    Ok(arr)
-                }
-
-                fn after_parse<R>(&mut self, reader: &mut R, ro: &ReadOptions, args: B::Args)-> BinResult<()>
-                    where R: Read + Seek,
-                {
-                    for val in self.iter_mut() {
-                        val.after_parse(reader, ro, args)?;
-                    }
-
-                    Ok(())
-                }
+            if let Some(name) = options.variable_name {
+                binary_template::write_vec_named(options.endian, pos, type_name, N, name);
+            } else {
+                binary_template::write_vec(options.endian, pos, type_name, N);
             }
-        )*
+        }
+
+        #[cfg(feature = "debug_template")]
+        let options = &ReadOptions {
+            dont_output_to_template: true,
+            ..*options
+        };
+
+        let mut arr: [B; N] = unsafe { core::mem::MaybeUninit::uninit().assume_init() };
+        for elem in arr.iter_mut() {
+            *elem = BinRead::read_options(reader, options, args)?;
+        }
+        Ok(arr)
+    }
+
+    fn after_parse<R>(&mut self, reader: &mut R, ro: &ReadOptions, args: B::Args) -> BinResult<()>
+    where
+        R: Read + Seek,
+    {
+        for val in self.iter_mut() {
+            val.after_parse(reader, ro, args)?;
+        }
+
+        Ok(())
     }
 }
-
-binread_array_impl!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32);
 
 /// Internal macro to recursively implement BinRead for every size tuple given
 /// in the invocation
