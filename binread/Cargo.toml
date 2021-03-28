@@ -9,6 +9,10 @@ description = "A Rust crate for helping read structs from binary data using ✨m
 readme = "../README.md"
 documentation = "https://docs.rs/binread"
 
+[[test]]
+name = "const_generic"
+required-features = ["const_generics"]
+
 [dependencies]
 array-init = { version = "1.1.0", optional = true }
 binread_derive = { version = "2.0.0", path = "../binread_derive" }
