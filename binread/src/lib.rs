@@ -112,6 +112,11 @@
 //! In order to parse generically, we have to (in some way) bound `Args`. The easiest way to do
 //! this is to bound `<T as BinRead>::Args` to `()` (no arguments), however it is also possible to
 //! either accept a specific set of arguments or be generic over the given arguments.
+//!
+//! ## Features
+//!
+//! * `const_generic` - Change array [`BinRead`] implementation to use const generics
+//! * `std` - Disable this feature to enable `no_std` support, on by default
 #![cfg_attr(not(feature="std"), no_std)]
 #![warn(rust_2018_idioms)]
 
