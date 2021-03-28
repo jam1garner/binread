@@ -196,20 +196,8 @@ impl<C: Copy + 'static, B: BinRead<Args = C>, const N: usize> BinRead for [B; N]
             ..*options
         };
 
-        // Currently the only way to initialize this array with const generics
-        // without introducing additional trait bounds.
-        // https://doc.rust-lang.org/std/mem/union.MaybeUninit.html#initializing-an-array-element-by-element
-        let mut arr: [core::mem::MaybeUninit<B>; N] =
-            unsafe { core::mem::MaybeUninit::uninit().assume_init() };
-        for elem in arr.iter_mut() {
-            *elem = core::mem::MaybeUninit::new(BinRead::read_options(reader, options, args)?);
-        }
-
-        // https://github.com/rust-lang/rust/issues/61956
-        let out_arr = unsafe { core::mem::transmute_copy::<_, [B; N]>(&arr) };
-        core::mem::forget(arr);
-
-        Ok(out_arr)
+        let arr = array_init::try_array_init(|_| BinRead::read_options(reader, options, args))?;
+        Ok(arr)
     }
 
     fn after_parse<R>(&mut self, reader: &mut R, ro: &ReadOptions, args: B::Args) -> BinResult<()>
