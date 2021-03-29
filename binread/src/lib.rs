@@ -115,7 +115,7 @@
 //!
 //! ## Features
 //!
-//! * `const_generic` - Change array [`BinRead`] implementation to use const generics
+//! * `const_generics` - Change array [`BinRead`] implementation to use const generics
 //! * `std` - Disable this feature to enable `no_std` support, on by default
 #![cfg_attr(not(feature="std"), no_std)]
 #![warn(rust_2018_idioms)]
