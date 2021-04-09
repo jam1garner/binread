@@ -271,7 +271,7 @@ impl <'field> FieldGenerator<'field> {
                 let value = self.out;
                 let map_err = super::get_map_err(SAVED_POSITION);
                 quote! {{
-                    let #SAVED_POSITION = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
+                    let #SAVED_POSITION = #POS_TRAIT::stream_pos(#READER)?;
 
                     (#COERCE_FN::<::core::result::Result<#ty, _>, _, _>(#try_map))(#value)#map_err?
                 }}
@@ -416,7 +416,7 @@ fn generate_seek_after(field: &StructField) -> TokenStream {
     let handle_error = debug_template::handle_error();
     let pad_size_to = field.pad_size_to.as_ref().map(|pad| quote! {{
         let pad = (#pad) as i64;
-        let size = (#SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))#handle_error? - #POS) as i64;
+        let size = (#POS_TRAIT::stream_pos(#READER)#handle_error? - #POS) as i64;
         if size < pad {
             #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(pad - size))#handle_error?;
         }
@@ -439,7 +439,7 @@ fn generate_seek_before(field: &StructField) -> TokenStream {
     let pad_before = field.pad_before.as_ref().map(map_pad);
     let align_before = field.align_before.as_ref().map(map_align);
     let pad_size_to_before = field.pad_size_to.as_ref().map(|_| quote! {
-        let #POS = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))#handle_error?;
+        let #POS = #POS_TRAIT::stream_pos(#READER)#handle_error?;
     });
 
     quote! {
@@ -471,7 +471,7 @@ fn map_align(align: &TokenStream) -> TokenStream {
     let handle_error = debug_template::handle_error();
     quote! {{
         let align = (#align) as i64;
-        let pos = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))#handle_error? as i64;
+        let pos = #POS_TRAIT::stream_pos(#READER)#handle_error? as i64;
         #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current((align - (pos % align)) % align))#handle_error?;
     }}
 }
@@ -489,7 +489,7 @@ fn wrap_save_restore(value: TokenStream) -> TokenStream {
     } else {
         let handle_error = debug_template::handle_error();
         quote! {
-            let #SAVED_POSITION = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))#handle_error?;
+            let #SAVED_POSITION = #POS_TRAIT::stream_pos(#READER)#handle_error?;
             #value
             #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Start(#SAVED_POSITION))#handle_error?;
         }

@@ -174,7 +174,7 @@ pub use {
     }
 };
 
-use io::{Read, Seek, SeekFrom};
+use io::{Read, Seek, SeekFrom, StreamPositionPolyfill};
 
 /// Derive macro for BinRead. [Usage here](BinRead).
 pub use binread_derive::BinRead;

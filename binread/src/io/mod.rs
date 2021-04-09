@@ -15,3 +15,28 @@ pub use no_std::*;
 
 #[cfg(feature = "std")]
 pub use std::io::{Bytes, Cursor, Error, ErrorKind, Read, Result, Seek, SeekFrom};
+
+pub trait StreamPositionPolyfill {
+    fn stream_pos(&mut self) -> Result<u64>;
+}
+
+impl<T: Seek> StreamPositionPolyfill for T {
+    #[rustversion::before(1.51)]
+    #[cfg(feature = "std")]
+    fn stream_pos(&mut self) -> Result<u64> {
+        self.seek(SeekFrom::Current(0))
+    }
+
+    // would prefer any(since(1.51), not(feature = "std"))
+    // but i don't know how to compose rustversion and cfg like that
+    #[rustversion::since(1.51)]
+    #[cfg(feature = "std")]
+    fn stream_pos(&mut self) -> Result<u64> {
+        self.stream_position()
+    }
+
+    #[cfg(not(feature = "std"))]
+    fn stream_pos(&mut self) -> Result<u64> {
+        self.stream_position()
+    }
+}

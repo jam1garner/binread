@@ -26,7 +26,7 @@ impl<T: BinRead> BinRead for PosValue<T> {
     fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: T::Args)
         -> BinResult<Self>
     {
-        let pos = reader.seek(SeekFrom::Current(0))?;
+        let pos = reader.stream_pos()?;
 
         Ok(PosValue {
             pos,

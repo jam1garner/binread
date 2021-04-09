@@ -82,6 +82,9 @@ pub enum SeekFrom {
 
 pub trait Seek {
     fn seek(&mut self, pos: SeekFrom) -> Result<u64>;
+    fn stream_position(&mut self) -> Result<u64> {
+        self.seek(SeekFrom::Current(0))
+    }
 }
 
 impl<S: Seek + ?Sized> Seek for &mut S {
