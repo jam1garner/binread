@@ -80,7 +80,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> BinRead for FilePtr<Pt
         let options = &{
             let mut options = *options;
 
-            let pos = reader.seek(SeekFrom::Current(0)).unwrap();
+            let pos = reader.stream_pos().unwrap();
             let type_name = &core::any::type_name::<Ptr>();
             if let Some(name) = options.variable_name {
                 binary_template::write_named(
@@ -111,7 +111,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> BinRead for FilePtr<Pt
         where R: Read + Seek,
     {
         let relative_to = ro.offset;
-        let before = reader.seek(SeekFrom::Current(0))?;
+        let before = reader.stream_pos()?;
         reader.seek(SeekFrom::Start(relative_to))?;
         reader.seek(self.ptr.into_seek_from())?;
 
@@ -136,7 +136,7 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> FilePtr<Ptr, BR> {
     ) -> BinResult<BR>
     {
         let mut ptr: Self = Self::read_options(reader, options, args)?;
-        let saved_pos = reader.seek(SeekFrom::Current(0))?;
+        let saved_pos = reader.stream_pos()?;
         ptr.after_parse(reader, options, args)?;
         reader.seek(SeekFrom::Start(saved_pos))?;
         Ok(ptr.into_inner())

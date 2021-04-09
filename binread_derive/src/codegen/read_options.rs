@@ -33,7 +33,7 @@ pub(crate) fn generate(ident: &Ident, input: &Input) -> TokenStream {
     };
 
     quote! {
-        let #POS = #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(0))?;
+        let #POS = #POS_TRAIT::stream_pos(#READER)?;
         (|| {
             #inner
         })().or_else(|error| {

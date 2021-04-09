@@ -145,7 +145,7 @@ impl BinRead for NullWideString {
         #[cfg(feature = "debug_template")]
         let options = {
             let mut options = *options;
-            let pos = reader.seek(SeekFrom::Current(0)).unwrap();
+            let pos = reader.stream_pos().unwrap();
 
             if !options.dont_output_to_template {
                 binary_template::write_named(
@@ -176,7 +176,7 @@ impl BinRead for NullString {
         -> BinResult<Self>
     {
         #[cfg(feature = "debug_template")] {
-            let pos = reader.seek(SeekFrom::Current(0)).unwrap();
+            let pos = reader.stream_pos().unwrap();
 
             if !options.dont_output_to_template {
                 binary_template::write_named(

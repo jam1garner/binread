@@ -9,7 +9,7 @@ macro_rules! binread_impl {
 
                 fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, _: Self::Args) -> BinResult<Self> {
                     let mut val = [0; core::mem::size_of::<$type_name>()];
-                    let pos = reader.seek(SeekFrom::Current(0))?;
+                    let pos = reader.stream_pos()?;
 
                     #[cfg(feature = "debug_template")]
                     {
@@ -81,7 +81,7 @@ impl<C: Copy + 'static, B: BinRead<Args = C>> BinRead for Vec<B> {
 
         #[cfg(feature = "debug_template")]
         {
-            let pos = reader.seek(SeekFrom::Current(0))?;
+            let pos = reader.stream_pos()?;
             let type_name = core::any::type_name::<B>().rsplitn(1, "::").next().unwrap();
 
             // this is a massive hack. I'm so sorry
@@ -127,7 +127,7 @@ macro_rules! binread_array_impl {
                 fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: Self::Args) -> BinResult<Self> {
                     #[cfg(feature = "debug_template")]
                     {
-                        let pos = reader.seek(SeekFrom::Current(0))?;
+                        let pos = reader.stream_pos()?;
                         let type_name = core::any::type_name::<B>().rsplitn(1, "::").nth(0).unwrap();
 
                         if let Some(name) = options.variable_name {
@@ -180,7 +180,7 @@ impl<C: Copy + 'static, B: BinRead<Args = C>, const N: usize> BinRead for [B; N]
     ) -> BinResult<Self> {
         #[cfg(feature = "debug_template")]
         {
-            let pos = reader.seek(SeekFrom::Current(0))?;
+            let pos = reader.stream_pos()?;
             let type_name = core::any::type_name::<B>().rsplitn(1, "::").nth(0).unwrap();
 
             if let Some(name) = options.variable_name {

@@ -81,7 +81,7 @@ where
     B: BinRead<Args = ()> + PartialEq + Sync + Send + 'static,
     R: io::Read + io::Seek,
 {
-    let pos = reader.seek(SeekFrom::Current(0))?;
+    let pos = reader.stream_pos()?;
     #[cfg(feature = "debug_template")]
     let options = {
         let mut options = *options;
@@ -107,7 +107,7 @@ where
     A: core::fmt::Debug + Sync + Send + 'static,
     E: Fn() -> A,
 {
-    let pos = reader.seek(SeekFrom::Current(0))?;
+    let pos = reader.stream_pos()?;
     if test {
         Ok(())
     } else {
