@@ -16,11 +16,11 @@ pub use no_std::*;
 #[cfg(feature = "std")]
 pub use std::io::{Bytes, Cursor, Error, ErrorKind, Read, Result, Seek, SeekFrom};
 
-pub trait StreamPositionPolyfill {
+pub trait StreamPosition {
     fn stream_pos(&mut self) -> Result<u64>;
 }
 
-impl<T: Seek> StreamPositionPolyfill for T {
+impl<T: Seek> StreamPosition for T {
     #[rustversion::before(1.51)]
     #[cfg(feature = "std")]
     fn stream_pos(&mut self) -> Result<u64> {

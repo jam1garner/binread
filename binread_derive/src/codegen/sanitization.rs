@@ -31,7 +31,7 @@ ident_str! {
     pub(super) OPTIONS = from_crate!(ReadOptions);
     pub(super) READ_TRAIT = from_crate!(io::Read);
     pub(super) SEEK_TRAIT = from_crate!(io::Seek);
-    pub(super) POS_TRAIT = from_crate!(io::StreamPositionPolyfill);
+    pub(super) POS_TRAIT = from_crate!(io::StreamPosition);
     pub(super) SEEK_FROM = from_crate!(io::SeekFrom);
     pub(super) BIN_RESULT = from_crate!(BinResult);
     pub(super) ENDIAN_ENUM = from_crate!(Endian);
