@@ -5,10 +5,10 @@ mod codegen;
 mod parser;
 
 use codegen::generate_impl;
-use parser::{Input, is_binread_attr};
+use parser::{is_binread_attr, Input};
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{DeriveInput, parse_macro_input};
+use syn::{parse_macro_input, DeriveInput};
 
 #[proc_macro_derive(BinRead, attributes(binread, br))]
 pub fn derive_binread_trait(input: TokenStream) -> TokenStream {
@@ -32,32 +32,37 @@ pub fn derive_binread(_: TokenStream, input: TokenStream) -> TokenStream {
     match &mut derive_input.data {
         syn::Data::Struct(input_struct) => {
             clean_field_attrs(&binread_input, 0, &mut input_struct.fields);
-        },
+        }
         syn::Data::Enum(input_enum) => {
             for (index, variant) in input_enum.variants.iter_mut().enumerate() {
                 clean_struct_attrs(&mut variant.attrs);
                 clean_field_attrs(&binread_input, index, &mut variant.fields);
             }
-        },
+        }
         syn::Data::Union(union) => {
             for field in union.fields.named.iter_mut() {
                 clean_struct_attrs(&mut field.attrs);
             }
-        },
+        }
     }
 
     quote!(
         #derive_input
         #generated_impl
-    ).into()
+    )
+    .into()
 }
 
-fn clean_field_attrs(binread_input: &Option<Input>, variant_index: usize, fields: &mut syn::Fields) {
+fn clean_field_attrs(
+    binread_input: &Option<Input>,
+    variant_index: usize,
+    fields: &mut syn::Fields,
+) {
     if let Some(binread_input) = binread_input {
         let fields = match fields {
             syn::Fields::Named(fields) => &mut fields.named,
             syn::Fields::Unnamed(fields) => &mut fields.unnamed,
-            syn::Fields::Unit => return
+            syn::Fields::Unit => return,
         };
 
         *fields = fields
@@ -87,20 +92,23 @@ mod tests {
 
     #[test]
     fn derive_code_coverage() {
-        let derive_tests_folder = env::current_dir().unwrap()
-                .join("..")
-                .join("binread")
-                .join("tests")
-                .join("derive");
+        let derive_tests_folder = env::current_dir()
+            .unwrap()
+            .join("..")
+            .join("binread")
+            .join("tests")
+            .join("derive");
 
         let mut run_success = true;
         for entry in fs::read_dir(derive_tests_folder).unwrap() {
             let entry = entry.unwrap();
             if !entry.file_type().unwrap().is_file() {
-                continue
+                continue;
             }
             let file = fs::File::open(entry.path()).unwrap();
-            let is_ok = emulate_derive_expansion_fallible(file, "BinRead", super::derive_binread_internal).is_ok();
+            let is_ok =
+                emulate_derive_expansion_fallible(file, "BinRead", super::derive_binread_internal)
+                    .is_ok();
             run_success &= is_ok;
         }
 

@@ -1,4 +1,7 @@
-pub use super::{cursor::Cursor, error::{Error, ErrorKind}};
+pub use super::{
+    cursor::Cursor,
+    error::{Error, ErrorKind},
+};
 
 pub type Result<T> = core::result::Result<T, Error>;
 
@@ -19,7 +22,10 @@ pub trait Read {
             }
         }
         if !buf.is_empty() {
-            Err(Error::new(ErrorKind::UnexpectedEof, "failed to fill whole buffer"))
+            Err(Error::new(
+                ErrorKind::UnexpectedEof,
+                "failed to fill whole buffer",
+            ))
         } else {
             Ok(())
         }
@@ -54,7 +60,7 @@ impl<R: Read + ?Sized> Read for &mut R {
 
 #[derive(Debug)]
 pub struct Bytes<R: Read> {
-    inner: R
+    inner: R,
 }
 
 impl<R: Read> Iterator for Bytes<R> {
@@ -163,9 +169,15 @@ mod tests {
         let mut x = ReturnError(Some(Error::new(ErrorKind::ConnectionRefused, ())));
         let mut out = [0, 1, 2, 3];
 
-        assert_eq!(x.read_exact(&mut out).unwrap_err().kind(), ErrorKind::ConnectionRefused);
+        assert_eq!(
+            x.read_exact(&mut out).unwrap_err().kind(),
+            ErrorKind::ConnectionRefused
+        );
 
         let mut x = ReturnError(Some(Error::new(ErrorKind::ConnectionRefused, ()))).bytes();
-        assert_eq!(x.next().unwrap().unwrap_err().kind(), ErrorKind::ConnectionRefused);
+        assert_eq!(
+            x.next().unwrap().unwrap_err().kind(),
+            ErrorKind::ConnectionRefused
+        );
     }
 }

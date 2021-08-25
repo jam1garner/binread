@@ -1,4 +1,4 @@
-use binread::{BinRead, BinReaderExt, io::Cursor};
+use binread::{io::Cursor, BinRead, BinReaderExt};
 
 #[test]
 fn const_generic_test() {

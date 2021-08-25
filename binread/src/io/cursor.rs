@@ -7,7 +7,7 @@ use super::no_std::*;
 #[derive(Clone, Debug, Default)]
 pub struct Cursor<T: AsRef<[u8]>> {
     inner: T,
-    pos: u64
+    pos: u64,
 }
 
 impl<T: AsRef<[u8]>> Cursor<T> {
@@ -24,10 +24,7 @@ impl<T: AsRef<[u8]>> Cursor<T> {
     }
 
     pub fn new(inner: T) -> Self {
-        Self {
-            inner,
-            pos: 0
-        }
+        Self { inner, pos: 0 }
     }
 
     pub fn position(&self) -> u64 {
@@ -43,7 +40,7 @@ impl<T: AsRef<[u8]>> Read for Cursor<T> {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
         let slice = self.inner.as_ref();
         if self.pos > slice.len() as u64 {
-            return Ok(0)
+            return Ok(0);
         }
         let amt = u64::min(slice.len() as u64 - self.pos, buf.len() as u64);
         buf[..amt as usize].copy_from_slice(&slice[self.pos as usize..(self.pos + amt) as usize]);
@@ -57,7 +54,10 @@ impl<T: AsRef<[u8]>> Seek for Cursor<T> {
         match pos {
             SeekFrom::Current(x) => {
                 if (self.pos as i64) + x < 0 {
-                    Err(Error::new(ErrorKind::InvalidInput, "invalid seek to a negative or overflowing position"))
+                    Err(Error::new(
+                        ErrorKind::InvalidInput,
+                        "invalid seek to a negative or overflowing position",
+                    ))
                 } else {
                     self.pos = ((self.pos as i64) + x) as u64;
                     Ok(self.pos)
@@ -70,7 +70,10 @@ impl<T: AsRef<[u8]>> Seek for Cursor<T> {
             SeekFrom::End(x) => {
                 let end = self.inner.as_ref().len() as i64;
                 if (self.pos as i64) + end + x < 0 {
-                    Err(Error::new(ErrorKind::InvalidInput, "invalid seek to a negative or overflowing position"))
+                    Err(Error::new(
+                        ErrorKind::InvalidInput,
+                        "invalid seek to a negative or overflowing position",
+                    ))
                 } else {
                     Ok(self.pos)
                 }
@@ -83,8 +86,8 @@ impl<T: AsRef<[u8]>> Seek for Cursor<T> {
 mod test {
     use super::*;
 
-    use std::io::{Read, Seek};
     use crate::io::no_std::{Read as NoStdRead, Seek as NoStdSeek};
+    use std::io::{Read, Seek};
 
     #[test]
     fn cursor_test() {
@@ -96,24 +99,21 @@ mod test {
         assert_eq!(test.get_mut(), test2.get_mut());
         assert_eq!(test.position(), test2.position());
         assert_eq!(test.position(), test2.position());
-        test.set_position(5); test2.set_position(5);
+        test.set_position(5);
+        test2.set_position(5);
         assert_eq!(test.position(), test2.position());
-        test.set_position(5000); test2.set_position(5000);
+        test.set_position(5000);
+        test2.set_position(5000);
         assert_eq!(test.position(), test2.position());
         assert_eq!(
             test.seek(SeekFrom::Start(0)).unwrap(),
             test2.seek(std::io::SeekFrom::Start(0)).unwrap(),
         );
-        let mut buf = [0u8; 4]; let mut buf2 = [0u8; 4];
-        assert_eq!(
-            test.read(&mut buf).unwrap(),
-            test2.read(&mut buf2).unwrap()
-        );
+        let mut buf = [0u8; 4];
+        let mut buf2 = [0u8; 4];
+        assert_eq!(test.read(&mut buf).unwrap(), test2.read(&mut buf2).unwrap());
         assert_eq!(buf, buf2);
-        assert_eq!(
-            test.read(&mut buf).unwrap(),
-            test2.read(&mut buf2).unwrap()
-        );
+        assert_eq!(test.read(&mut buf).unwrap(), test2.read(&mut buf2).unwrap());
         assert_eq!(buf, buf2);
     }
 }

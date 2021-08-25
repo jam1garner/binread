@@ -6,14 +6,20 @@ use super::*;
 // };
 
 #[cfg(not(feature = "std"))]
-use alloc::{string::{String, ToString}, vec};
-use core::num::{NonZeroU8, NonZeroU16};
+use alloc::{
+    string::{String, ToString},
+    vec,
+};
+use core::num::{NonZeroU16, NonZeroU8};
 
 impl BinRead for Vec<NonZeroU8> {
     type Args = ();
 
-    fn read_options<R: Read + Seek>(reader: &mut R, _: &ReadOptions, _: Self::Args) -> BinResult<Self>
-    {
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        _: &ReadOptions,
+        _: Self::Args,
+    ) -> BinResult<Self> {
         reader
             .bytes()
             .take_while(|x| !matches!(x, Ok(0)))
@@ -121,15 +127,17 @@ impl From<NullString> for Vec<u8> {
 impl BinRead for Vec<NonZeroU16> {
     type Args = ();
 
-    fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, _: Self::Args)
-        -> BinResult<Self>
-    {
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        options: &ReadOptions,
+        _: Self::Args,
+    ) -> BinResult<Self> {
         let mut values = vec![];
 
         loop {
             let val = <u16>::read_options(reader, options, ())?;
             if val == 0 {
-                return Ok(values)
+                return Ok(values);
             }
             values.push(unsafe { NonZeroU16::new_unchecked(val) });
         }
@@ -139,9 +147,11 @@ impl BinRead for Vec<NonZeroU16> {
 impl BinRead for NullWideString {
     type Args = ();
 
-    fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: Self::Args)
-        -> BinResult<Self>
-    {
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        options: &ReadOptions,
+        args: Self::Args,
+    ) -> BinResult<Self> {
         #[cfg(feature = "debug_template")]
         let options = {
             let mut options = *options;
@@ -152,11 +162,11 @@ impl BinRead for NullWideString {
                     options.endian,
                     pos,
                     "wstring",
-                    &options.variable_name
+                    &options
+                        .variable_name
                         .map(ToString::to_string)
-                        .unwrap_or_else(binary_template::get_next_var_name)
+                        .unwrap_or_else(binary_template::get_next_var_name),
                 );
-
             }
             options.dont_output_to_template = true;
             options
@@ -164,18 +174,20 @@ impl BinRead for NullWideString {
 
         // https://github.com/rust-lang/rust-clippy/issues/6447
         #[allow(clippy::unit_arg)]
-        <Vec<NonZeroU16>>::read_options(reader, &options, args)
-            .map(|chars| chars.into())
+        <Vec<NonZeroU16>>::read_options(reader, &options, args).map(|chars| chars.into())
     }
 }
 
 impl BinRead for NullString {
     type Args = ();
 
-    fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: Self::Args)
-        -> BinResult<Self>
-    {
-        #[cfg(feature = "debug_template")] {
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        options: &ReadOptions,
+        args: Self::Args,
+    ) -> BinResult<Self> {
+        #[cfg(feature = "debug_template")]
+        {
             let pos = reader.stream_pos().unwrap();
 
             if !options.dont_output_to_template {
@@ -183,17 +195,17 @@ impl BinRead for NullString {
                     options.endian,
                     pos,
                     "string",
-                    &options.variable_name
-                            .map(ToString::to_string)
-                            .unwrap_or_else(binary_template::get_next_var_name)
+                    &options
+                        .variable_name
+                        .map(ToString::to_string)
+                        .unwrap_or_else(binary_template::get_next_var_name),
                 );
             }
         }
 
         // https://github.com/rust-lang/rust-clippy/issues/6447
         #[allow(clippy::unit_arg)]
-        <Vec<NonZeroU8>>::read_options(reader, options, args)
-            .map(|chars| chars.into())
+        <Vec<NonZeroU8>>::read_options(reader, options, args).map(|chars| chars.into())
     }
 }
 
@@ -243,10 +255,11 @@ impl ToString for NullWideString {
 mod tests {
     #[test]
     fn null_wide_strings() {
-        use crate::{BinReaderExt, NullWideString, io::Cursor};
+        use crate::{io::Cursor, BinReaderExt, NullWideString};
 
         const WIDE_STRINGS: &[u8] = b"w\0i\0d\0e\0 \0s\0t\0r\0i\0n\0g\0s\0\0\0";
-        const ARE_ENDIAN_DEPENDENT: &[u8] = b"\0a\0r\0e\0 \0e\0n\0d\0i\0a\0n\0 \0d\0e\0p\0e\0n\0d\0e\0n\0t\0\0";
+        const ARE_ENDIAN_DEPENDENT: &[u8] =
+            b"\0a\0r\0e\0 \0e\0n\0d\0i\0a\0n\0 \0d\0e\0p\0e\0n\0d\0e\0n\0t\0\0";
 
         let mut wide_strings = Cursor::new(WIDE_STRINGS);
         let mut are_endian_dependent = Cursor::new(ARE_ENDIAN_DEPENDENT);
@@ -269,17 +282,24 @@ mod tests {
 
     #[test]
     fn null_strings() {
-        use crate::{BinReaderExt, NullString, io::Cursor};
+        use crate::{io::Cursor, BinReaderExt, NullString};
 
-        let mut null_separated_strings = Cursor::new(b"null terminated strings? in my system's language?\0no thanks\0");
+        let mut null_separated_strings =
+            Cursor::new(b"null terminated strings? in my system's language?\0no thanks\0");
 
         assert_eq!(
-            null_separated_strings.read_be::<NullString>().unwrap().into_string(),
+            null_separated_strings
+                .read_be::<NullString>()
+                .unwrap()
+                .into_string(),
             "null terminated strings? in my system's language?"
         );
 
         assert_eq!(
-            null_separated_strings.read_be::<NullString>().unwrap().into_string(),
+            null_separated_strings
+                .read_be::<NullString>()
+                .unwrap()
+                .into_string(),
             "no thanks"
         );
     }

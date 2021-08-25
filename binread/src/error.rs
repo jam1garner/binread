@@ -12,10 +12,7 @@ pub enum Error {
         found: Box<dyn Any + Sync + Send>,
     },
     /// The condition of an assertion without a custom type failed
-    AssertFail {
-        pos: u64,
-        message: String
-    },
+    AssertFail { pos: u64, message: String },
     /// An error that occured while reading from, or seeking within, the reader
     Io(io::Error),
     /// A custom error, most often given from the second value passed into an [`assert`](attribute#Assert)
@@ -24,13 +21,11 @@ pub enum Error {
         err: Box<dyn Any + Sync + Send>,
     },
     /// No variant in the enum was successful in parsing the data
-    NoVariantMatch {
-        pos: u64
-    },
+    NoVariantMatch { pos: u64 },
     EnumErrors {
         pos: u64,
         variant_errors: Vec<(/*variant name*/ &'static str, Error)>,
-    }
+    },
 }
 
 impl Error {
@@ -60,11 +55,20 @@ impl fmt::Debug for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::BadMagic { pos, .. } => write!(f, "BadMagic {{ pos: 0x{:X} }}", pos),
-            Self::AssertFail { pos, message } => write!(f, "AssertFail at 0x{:X}: \"{}\"", pos, message),
+            Self::AssertFail { pos, message } => {
+                write!(f, "AssertFail at 0x{:X}: \"{}\"", pos, message)
+            }
             Self::Io(err) => write!(f, "Io({:?})", err),
             Self::Custom { pos, err } => write!(f, "Custom {{ pos: 0x{:X}, err: {:?} }}", pos, err),
             Self::NoVariantMatch { pos } => write!(f, "NoVariantMatch {{ pos: 0x{:X} }}", pos),
-            Self::EnumErrors { pos, variant_errors } => write!(f, "EnumErrors {{ pos: 0x{:X}, variant_errors: {:?} }}", pos, variant_errors)
+            Self::EnumErrors {
+                pos,
+                variant_errors,
+            } => write!(
+                f,
+                "EnumErrors {{ pos: 0x{:X}, variant_errors: {:?} }}",
+                pos, variant_errors
+            ),
         }
     }
 }
@@ -94,7 +98,7 @@ where
     } else {
         Err(Error::BadMagic {
             pos,
-            found: Box::new(val) as _
+            found: Box::new(val) as _,
         })
     }
 }
@@ -111,17 +115,19 @@ where
     if test {
         Ok(())
     } else {
-        error.map(|err|{
-            Err(Error::Custom {
-                pos,
-                err: Box::new(err())
+        error
+            .map(|err| {
+                Err(Error::Custom {
+                    pos,
+                    err: Box::new(err()),
+                })
             })
-        }).unwrap_or_else(||{
-            Err(Error::AssertFail {
-                pos,
-                message: message.into()
+            .unwrap_or_else(|| {
+                Err(Error::AssertFail {
+                    pos,
+                    message: message.into(),
+                })
             })
-        })
     }
 }
 
@@ -130,9 +136,10 @@ pub fn read_options_then_after_parse<Args, T, R>(
     ro: &ReadOptions,
     args: T::Args,
 ) -> BinResult<T>
-    where Args: Copy + 'static,
-          T: BinRead<Args = Args>,
-          R: Read + Seek,
+where
+    Args: Copy + 'static,
+    T: BinRead<Args = Args>,
+    R: Read + Seek,
 {
     let mut val = T::read_options(reader, ro, args)?;
     val.after_parse(reader, ro, args)?;

@@ -11,21 +11,15 @@ pub enum Endian {
     Native,
 }
 
-pub use Endian::{
-    Big as BE,
-    Little as LE,
-    Native as NE
-};
+pub use Endian::{Big as BE, Little as LE, Native as NE};
 
 impl From<&Endian> for String {
     fn from(endian: &Endian) -> String {
-        String::from(
-            match endian {
-                Endian::Big => "Big",
-                Endian::Little => "Little",
-                Endian::Native => "Native",
-            }
-        )
+        String::from(match endian {
+            Endian::Big => "Big",
+            Endian::Little => "Little",
+            Endian::Native => "Native",
+        })
     }
 }
 
@@ -45,7 +39,9 @@ mod tests {
             (Endian::Big, "Big"),
             (Endian::Little, "Little"),
             (Endian::Native, "Native"),
-        ].iter() {
+        ]
+        .iter()
+        {
             let converted: String = endian.into();
             assert_eq!(converted, string)
         }

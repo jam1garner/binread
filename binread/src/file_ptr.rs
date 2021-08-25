@@ -58,7 +58,7 @@ use core::ops::{Deref, DerefMut};
 /// Use `offset` to change what the pointer is relative to (default: beginning of reader).
 pub struct FilePtr<Ptr: IntoSeekFrom, BR: BinRead> {
     pub ptr: Ptr,
-    pub value: Option<BR>
+    pub value: Option<BR>,
 }
 
 /// Type alias for 8-bit pointers
@@ -75,7 +75,11 @@ pub type FilePtr128<T> = FilePtr<u128, T>;
 impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> BinRead for FilePtr<Ptr, BR> {
     type Args = BR::Args;
 
-    fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, _: Self::Args) -> BinResult<Self> {
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        options: &ReadOptions,
+        _: Self::Args,
+    ) -> BinResult<Self> {
         #[cfg(feature = "debug_template")]
         let options = &{
             let mut options = *options;
@@ -87,28 +91,25 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> BinRead for FilePtr<Pt
                     options.endian,
                     pos,
                     type_name,
-                    &format!("ptr_to_{}", name)
+                    &format!("ptr_to_{}", name),
                 );
             } else {
-                binary_template::write(
-                    options.endian,
-                    pos,
-                    type_name,
-                );
+                binary_template::write(options.endian, pos, type_name);
             }
             options.dont_output_to_template = true;
 
             options
         };
 
-        Ok(FilePtr{
+        Ok(FilePtr {
             ptr: Ptr::read_options(reader, options, ())?,
-            value: None
+            value: None,
         })
     }
 
-    fn after_parse<R>(&mut self, reader: &mut R, ro: &ReadOptions, args: BR::Args)-> BinResult<()>
-        where R: Read + Seek,
+    fn after_parse<R>(&mut self, reader: &mut R, ro: &ReadOptions, args: BR::Args) -> BinResult<()>
+    where
+        R: Read + Seek,
     {
         let relative_to = ro.offset;
         let before = reader.stream_pos()?;
@@ -132,9 +133,8 @@ impl<Ptr: BinRead<Args = ()> + IntoSeekFrom, BR: BinRead> FilePtr<Ptr, BR> {
     pub fn parse<R: Read + Seek>(
         reader: &mut R,
         options: &ReadOptions,
-        args: BR::Args
-    ) -> BinResult<BR>
-    {
+        args: BR::Args,
+    ) -> BinResult<BR> {
         let mut ptr: Self = Self::read_options(reader, options, args)?;
         let saved_pos = reader.stream_pos()?;
         ptr.after_parse(reader, options, args)?;
@@ -179,7 +179,9 @@ impl<Ptr: IntoSeekFrom, BR: BinRead> Deref for FilePtr<Ptr, BR> {
     fn deref(&self) -> &Self::Target {
         match self.value.as_ref() {
             Some(x) => x,
-            None => panic!("Deref'd FilePtr before reading (make sure to use FilePtr::after_parse first)")
+            None => panic!(
+                "Deref'd FilePtr before reading (make sure to use FilePtr::after_parse first)"
+            ),
         }
     }
 }
@@ -190,14 +192,17 @@ impl<Ptr: IntoSeekFrom, BR: BinRead> DerefMut for FilePtr<Ptr, BR> {
     fn deref_mut(&mut self) -> &mut BR {
         match self.value.as_mut() {
             Some(x) => x,
-            None => panic!("Deref'd FilePtr before reading (make sure to use FilePtr::after_parse first)")
+            None => panic!(
+                "Deref'd FilePtr before reading (make sure to use FilePtr::after_parse first)"
+            ),
         }
     }
 }
 
 impl<Ptr, BR> fmt::Debug for FilePtr<Ptr, BR>
-    where Ptr: BinRead<Args = ()> + IntoSeekFrom,
-          BR: BinRead + fmt::Debug,
+where
+    Ptr: BinRead<Args = ()> + IntoSeekFrom,
+    BR: BinRead + fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(ref value) = self.value {
@@ -209,10 +214,10 @@ impl<Ptr, BR> fmt::Debug for FilePtr<Ptr, BR>
 }
 
 impl<Ptr, BR> PartialEq<FilePtr<Ptr, BR>> for FilePtr<Ptr, BR>
-    where Ptr: BinRead<Args = ()> + IntoSeekFrom,
-          BR: BinRead + PartialEq,
+where
+    Ptr: BinRead<Args = ()> + IntoSeekFrom,
+    BR: BinRead + PartialEq,
 {
-
     fn eq(&self, other: &Self) -> bool {
         self.deref() == other.deref()
     }

@@ -1,9 +1,9 @@
+use super::{debug_template, get_assertions, get_magic, PreludeGenerator, ReadOptionsGenerator};
 #[allow(clippy::wildcard_imports)]
 use crate::codegen::sanitization::*;
 use crate::parser::{Input, Map, PassedArgs, ReadMode, Struct, StructField};
 use proc_macro2::TokenStream;
 use quote::quote;
-use super::{PreludeGenerator, ReadOptionsGenerator, debug_template, get_assertions, get_magic};
 use syn::Ident;
 
 pub(super) fn generate_unit_struct(input: &Input, variant_ident: Option<&Ident>) -> TokenStream {
@@ -30,7 +30,7 @@ pub(super) struct StructGenerator<'input> {
     out: TokenStream,
 }
 
-impl <'input> StructGenerator<'input> {
+impl<'input> StructGenerator<'input> {
     pub(super) fn new(input: &'input Input, st: &'input Struct) -> Self {
         Self {
             input,
@@ -43,7 +43,10 @@ impl <'input> StructGenerator<'input> {
         self.out
     }
 
-    pub(super) fn add_assertions(mut self, extra_assertions: impl Iterator<Item = TokenStream>) -> Self {
+    pub(super) fn add_assertions(
+        mut self,
+        extra_assertions: impl Iterator<Item = TokenStream>,
+    ) -> Self {
         let assertions = get_assertions(&self.st.assertions).chain(extra_assertions);
         let head = self.out;
         self.out = quote! {
@@ -58,7 +61,11 @@ impl <'input> StructGenerator<'input> {
         let prelude = get_prelude(self.input);
         let read_fields = self.st.fields.iter().map(|field| generate_field(field));
         let after_parse = {
-            let after_parse = self.st.fields.iter().map(|field| generate_after_parse(field));
+            let after_parse = self
+                .st
+                .fields
+                .iter()
+                .map(|field| generate_after_parse(field));
             wrap_save_restore(quote!(#(#after_parse)*))
         };
         self.out = quote! {
@@ -143,7 +150,7 @@ struct AfterParseGenerator<'field> {
     out: TokenStream,
 }
 
-impl <'field> AfterParseGenerator<'field> {
+impl<'field> AfterParseGenerator<'field> {
     fn new(field: &'field StructField) -> Self {
         Self {
             field,
@@ -151,7 +158,12 @@ impl <'field> AfterParseGenerator<'field> {
         }
     }
 
-    fn call_after_parse(mut self, after_parse_fn: IdentStr, options_var: &Ident, args_var: &Ident) -> Self {
+    fn call_after_parse(
+        mut self,
+        after_parse_fn: IdentStr,
+        options_var: &Ident,
+        args_var: &Ident,
+    ) -> Self {
         let handle_error = debug_template::handle_error();
         let value = self.out;
         self.out = quote! {
@@ -202,7 +214,7 @@ struct FieldGenerator<'field> {
     emit_options_vars: bool,
 }
 
-impl <'field> FieldGenerator<'field> {
+impl<'field> FieldGenerator<'field> {
     fn new(field: &'field StructField) -> Self {
         Self {
             field,
@@ -265,7 +277,7 @@ impl <'field> FieldGenerator<'field> {
             Map::Map(map) => {
                 let value = self.out;
                 quote! { (#COERCE_FN::<#ty, _, _>(#map))(#value) }
-            },
+            }
             Map::Try(try_map) => {
                 // TODO: Position should always just be saved once for a field if used
                 let value = self.out;
@@ -275,7 +287,7 @@ impl <'field> FieldGenerator<'field> {
 
                     (#COERCE_FN::<::core::result::Result<#ty, _>, _, _>(#try_map))(#value)#map_err?
                 }}
-            },
+            }
         };
 
         self
@@ -414,13 +426,15 @@ fn get_prelude(input: &Input) -> TokenStream {
 
 fn generate_seek_after(field: &StructField) -> TokenStream {
     let handle_error = debug_template::handle_error();
-    let pad_size_to = field.pad_size_to.as_ref().map(|pad| quote! {{
-        let pad = (#pad) as i64;
-        let size = (#POS_TRAIT::stream_pos(#READER)#handle_error? - #POS) as i64;
-        if size < pad {
-            #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(pad - size))#handle_error?;
-        }
-    }});
+    let pad_size_to = field.pad_size_to.as_ref().map(|pad| {
+        quote! {{
+            let pad = (#pad) as i64;
+            let size = (#POS_TRAIT::stream_pos(#READER)#handle_error? - #POS) as i64;
+            if size < pad {
+                #SEEK_TRAIT::seek(#READER, #SEEK_FROM::Current(pad - size))#handle_error?;
+            }
+        }}
+    });
     let pad_after = field.pad_after.as_ref().map(map_pad);
     let align_after = field.align_after.as_ref().map(map_align);
 
@@ -433,13 +447,17 @@ fn generate_seek_after(field: &StructField) -> TokenStream {
 
 fn generate_seek_before(field: &StructField) -> TokenStream {
     let handle_error = debug_template::handle_error();
-    let seek_before = field.seek_before.as_ref().map(|seek| quote! {
-        #SEEK_TRAIT::seek(#READER, #seek)#handle_error?;
+    let seek_before = field.seek_before.as_ref().map(|seek| {
+        quote! {
+            #SEEK_TRAIT::seek(#READER, #seek)#handle_error?;
+        }
     });
     let pad_before = field.pad_before.as_ref().map(map_pad);
     let align_before = field.align_before.as_ref().map(map_align);
-    let pad_size_to_before = field.pad_size_to.as_ref().map(|_| quote! {
-        let #POS = #POS_TRAIT::stream_pos(#READER)#handle_error?;
+    let pad_size_to_before = field.pad_size_to.as_ref().map(|_| {
+        quote! {
+            let #POS = #POS_TRAIT::stream_pos(#READER)#handle_error?;
+        }
     });
 
     quote! {
@@ -461,10 +479,7 @@ fn get_after_parse_handler(field: &StructField) -> Option<IdentStr> {
 }
 
 fn get_return_type(variant_ident: Option<&Ident>) -> TokenStream {
-    variant_ident.map_or_else(
-        || quote! { Self },
-        |ident| quote! { Self::#ident }
-    )
+    variant_ident.map_or_else(|| quote! { Self }, |ident| quote! { Self::#ident })
 }
 
 fn map_align(align: &TokenStream) -> TokenStream {

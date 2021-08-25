@@ -17,26 +17,31 @@ use core::fmt;
 /// ```
 pub struct PosValue<T> {
     pub val: T,
-    pub pos: u64
+    pub pos: u64,
 }
 
 impl<T: BinRead> BinRead for PosValue<T> {
     type Args = T::Args;
 
-    fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: T::Args)
-        -> BinResult<Self>
-    {
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        options: &ReadOptions,
+        args: T::Args,
+    ) -> BinResult<Self> {
         let pos = reader.stream_pos()?;
 
         Ok(PosValue {
             pos,
-            val: T::read_options(reader, options, args)?
+            val: T::read_options(reader, options, args)?,
         })
     }
 
-    fn after_parse<R: Read + Seek>(&mut self, reader: &mut R, options: &ReadOptions, args: Self::Args)
-        -> BinResult<()>
-    {
+    fn after_parse<R: Read + Seek>(
+        &mut self,
+        reader: &mut R,
+        options: &ReadOptions,
+        args: Self::Args,
+    ) -> BinResult<()> {
         self.val.after_parse(reader, options, args)
     }
 }
@@ -65,7 +70,7 @@ impl<T: Clone> Clone for PosValue<T> {
     fn clone(&self) -> Self {
         Self {
             val: self.val.clone(),
-            pos: self.pos
+            pos: self.pos,
         }
     }
 }
@@ -82,12 +87,12 @@ mod tests {
 
     #[test]
     fn pos_value() {
-        use binread::{BinRead, PosValue, BinReaderExt, io::Cursor};
+        use binread::{io::Cursor, BinRead, BinReaderExt, PosValue};
 
         #[derive(BinRead)]
         struct MyType {
             a: u16,
-            b: PosValue<u8>
+            b: PosValue<u8>,
         }
 
         let mut val = Cursor::new(b"\xFF\xFE\xFD").read_be::<MyType>().unwrap();

@@ -117,7 +117,7 @@
 //!
 //! * `const_generics` - Change array [`BinRead`] implementation to use const generics
 //! * `std` - Disable this feature to enable `no_std` support, on by default
-#![cfg_attr(not(feature="std"), no_std)]
+#![cfg_attr(not(feature = "std"), no_std)]
 #![warn(rust_2018_idioms)]
 
 #[cfg(feature = "std")]
@@ -127,26 +127,25 @@ use std as alloc;
 extern crate alloc;
 
 #[cfg(not(feature = "std"))]
-use alloc::{
-    boxed::Box,
-    vec::Vec,
-    string::String,
-};
+use alloc::{boxed::Box, string::String, vec::Vec};
 
 #[doc(hidden)]
 #[path = "private.rs"]
 pub mod __private;
 
-pub mod io;
-pub mod error;
-pub mod endian;
-pub mod helpers;
-pub mod file_ptr;
 pub mod attribute;
+pub mod endian;
+pub mod error;
+pub mod file_ptr;
+pub mod helpers;
+pub mod io;
+#[doc(hidden)]
+pub mod options;
+#[doc(hidden)]
+pub mod pos_value;
 pub mod punctuated;
-#[doc(hidden)] pub mod options;
-#[doc(hidden)] pub mod strings;
-#[doc(hidden)] pub mod pos_value;
+#[doc(hidden)]
+pub mod strings;
 
 #[cfg(feature = "std")]
 #[cfg(feature = "debug_template")]
@@ -156,22 +155,13 @@ use core::any::{Any, TypeId};
 
 #[doc(inline)]
 pub use {
-    error::Error,
     endian::Endian,
-    pos_value::PosValue,
-    file_ptr::{
-        FilePtr,
-        FilePtr8,
-        FilePtr16,
-        FilePtr32,
-        FilePtr64,
-        FilePtr128,
-    },
+    error::Error,
+    file_ptr::{FilePtr, FilePtr128, FilePtr16, FilePtr32, FilePtr64, FilePtr8},
+    helpers::{count, until, until_eof, until_exclusive},
     options::ReadOptions,
-    strings::{
-        NullString,
-        NullWideString
-    }
+    pos_value::PosValue,
+    strings::{NullString, NullWideString},
 };
 
 use io::{Read, Seek, SeekFrom, StreamPosition};
@@ -203,7 +193,7 @@ pub trait BinRead: Sized {
     fn read<R: Read + Seek>(reader: &mut R) -> BinResult<Self> {
         let args = match Self::args_default() {
             Some(args) => args,
-            None => panic!("Must pass args, no args_default implemented")
+            None => panic!("Must pass args, no args_default implemented"),
         };
 
         Self::read_options(reader, &ReadOptions::default(), args)
@@ -215,9 +205,18 @@ pub trait BinRead: Sized {
     }
 
     /// Read the type from the reader
-    fn read_options<R: Read + Seek>(reader: &mut R, options: &ReadOptions, args: Self::Args) -> BinResult<Self>;
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        options: &ReadOptions,
+        args: Self::Args,
+    ) -> BinResult<Self>;
 
-    fn after_parse<R: Read + Seek>(&mut self, _: &mut R, _: &ReadOptions, _: Self::Args) -> BinResult<()> {
+    fn after_parse<R: Read + Seek>(
+        &mut self,
+        _: &mut R,
+        _: &ReadOptions,
+        _: Self::Args,
+    ) -> BinResult<()> {
         Ok(())
     }
 
@@ -227,9 +226,7 @@ pub trait BinRead: Sized {
         // Trick to effectively get specialization on stable, should constant-folded away
         // Returns `Some(())` if Self::Args == (), otherwise returns `None`
         if TypeId::of::<Self::Args>() == TypeId::of::<()>() {
-            Some(unsafe{
-                core::mem::MaybeUninit::uninit().assume_init()
-            })
+            Some(unsafe { core::mem::MaybeUninit::uninit().assume_init() })
         } else {
             None
         }
@@ -256,11 +253,12 @@ pub trait BinReaderExt: Read + Seek + Sized {
     fn read_type<T: BinRead>(&mut self, endian: Endian) -> BinResult<T> {
         let args = match T::args_default() {
             Some(args) => args,
-            None => panic!("Must pass args, no args_default implemented")
+            None => panic!("Must pass args, no args_default implemented"),
         };
 
-        let options = ReadOptions{
-            endian, ..Default::default()
+        let options = ReadOptions {
+            endian,
+            ..Default::default()
         };
 
         let mut res = T::read_options(self, &options, args)?;
@@ -282,6 +280,37 @@ pub trait BinReaderExt: Read + Seek + Sized {
     /// Read the given type from the reader with the native byteorder
     fn read_ne<T: BinRead>(&mut self) -> BinResult<T> {
         self.read_type(Endian::Native)
+    }
+
+    /// Read `T` from the reader with the given byte order and arguments.
+    fn read_type_args<T: BinRead>(&mut self, endian: Endian, args: T::Args) -> BinResult<T> {
+        let options = ReadOptions {
+            endian,
+            ..Default::default()
+        };
+
+        let mut res = T::read_options(self, &options, args.clone())?;
+        res.after_parse(self, &options, args)?;
+
+        Ok(res)
+    }
+
+    /// Read `T` from the reader, assuming big-endian byte order, using the
+    /// given arguments.
+    fn read_be_args<T: BinRead>(&mut self, args: T::Args) -> BinResult<T> {
+        self.read_type_args(Endian::Big, args)
+    }
+
+    /// Read `T` from the reader, assuming little-endian byte order, using the
+    /// given arguments.
+    fn read_le_args<T: BinRead>(&mut self, args: T::Args) -> BinResult<T> {
+        self.read_type_args(Endian::Little, args)
+    }
+
+    /// Read `T` from the reader, assuming native-endian byte order, using the
+    /// given arguments.
+    fn read_ne_args<T: BinRead>(&mut self, args: T::Args) -> BinResult<T> {
+        self.read_type_args(Endian::Native, args)
     }
 }
 
