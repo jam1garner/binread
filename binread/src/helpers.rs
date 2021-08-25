@@ -155,18 +155,19 @@ where
     Ok(result.into_iter().collect())
 }
 
-/// A helper equivelant to `#[br(count = N)]` which can be used with any collection.
+/// A helper similar to `#[br(count = N)]` which can be used with any collection.
 ///
 /// # Examples
 ///
 /// ```
 /// # use binread::{BinRead, helpers::count, io::Cursor, BinReaderExt};
+/// # use std::collections::VecDeque;
 /// #[derive(BinRead)]
 /// struct CountBytes {
 ///     len: u8,
 ///
 ///     #[br(parse_with = count(len as usize))]
-///     data: Vec<u8>,
+///     data: VecDeque<u8>,
 /// }
 ///
 /// # let mut x = Cursor::new(b"\x03\x01\x02\x03");
