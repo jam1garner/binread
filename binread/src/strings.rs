@@ -17,14 +17,16 @@ impl BinRead for Vec<NonZeroU8> {
 
     fn read_options<R: Read + Seek>(
         reader: &mut R,
-        _: &ReadOptions,
+        options: &ReadOptions,
         _: Self::Args,
     ) -> BinResult<Self> {
-        reader
-            .bytes()
-            .take_while(|x| !matches!(x, Ok(0)))
-            .map(|x| Ok(x.map(|byte| unsafe { NonZeroU8::new_unchecked(byte) })?))
-            .collect()
+        let bytes: Box<dyn Iterator<Item=Result<u8, io::Error>>> = match options.count {
+            None => Box::new(reader.bytes()),
+            Some(count) => Box::new(reader.bytes().take(count)),
+        };
+        bytes.take_while(|x| !matches!(x, Ok(0)))
+             .map(|x| Ok(x.map(|byte| unsafe { NonZeroU8::new_unchecked(byte) })?))
+             .collect()
     }
 }
 

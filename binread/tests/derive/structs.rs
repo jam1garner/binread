@@ -400,3 +400,23 @@ fn tuple_calc_temp_field() {
     // compilation would fail if it weren’t due to missing a second item
     assert_eq!(result, Test(5u32));
 }
+
+#[test]
+fn nullstring_count() {
+    #[derive(BinRead)]
+    struct TestMan{
+        #[br(count = 15, pad_size_to = 15)]
+        name: NullString,
+        age: u8,
+    }
+
+    let mut charlotte_bin = Cursor::new("Charlotte\0\0\0\0\0\0\x18");
+    let charlotte = TestMan::read(&mut charlotte_bin).unwrap();
+    assert_eq!(&*charlotte.name, b"Charlotte");
+    assert_eq!(charlotte.age, 24);
+
+    let mut longname_bin = Cursor::new("Zinjanthropuses\x07");
+    let longname = TestMan::read(&mut longname_bin).unwrap();
+    assert_eq!(&*longname.name, b"Zinjanthropuses");
+    assert_eq!(longname.age, 7);
+}
