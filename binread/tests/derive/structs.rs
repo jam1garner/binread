@@ -1,7 +1,7 @@
 use binread::{
     derive_binread,
     io::{Cursor, Read, Seek, SeekFrom},
-    BinRead, BinResult, FilePtr, NullString, ReadOptions,
+    BinRead, BinResult, FilePtr, NullString, ReadOptions, NullWideString,
 };
 
 #[test]
@@ -419,4 +419,25 @@ fn nullstring_count() {
     let longname = TestMan::read(&mut longname_bin).unwrap();
     assert_eq!(&*longname.name, b"Zinjanthropuses");
     assert_eq!(longname.age, 7);
+}
+
+#[test]
+fn nullwidestring_count() {
+    #[derive(BinRead)]
+    #[br(big)]
+    struct TestWideMan{
+        #[br(count = 7, pad_size_to = 14)]
+        name: NullWideString,
+        age: u16,
+    }
+
+    let mut mike_bin = Cursor::new(b"\0M\0i\0k\0e\0\0\0\0\0\0\0\x1e");
+    let mike = TestWideMan::read(&mut mike_bin).unwrap();
+    assert_eq!(mike.name.into_string(), "Mike");
+    assert_eq!(mike.age, 30);
+
+    let mut long16name_bin = Cursor::new("\0a\0a\0a\0a\0a\0a\0a\0\x64");
+    let longname = TestWideMan::read(&mut long16name_bin).unwrap();
+    assert_eq!(longname.name.into_string(), "aaaaaaa");
+    assert_eq!(longname.age, 100);
 }

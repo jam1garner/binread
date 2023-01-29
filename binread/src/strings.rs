@@ -137,6 +137,11 @@ impl BinRead for Vec<NonZeroU16> {
         let mut values = vec![];
 
         loop {
+            if let Some(count) = options.count {
+                if values.len() >= count {
+                    return Ok(values);
+                }
+            }
             let val = <u16>::read_options(reader, options, ())?;
             if val == 0 {
                 return Ok(values);
