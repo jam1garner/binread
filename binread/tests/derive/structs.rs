@@ -405,7 +405,7 @@ fn tuple_calc_temp_field() {
 fn nullstring_count() {
     #[derive(BinRead)]
     struct TestMan{
-        #[br(count = 15, pad_size_to = 15)]
+        #[br(count = 15)]
         name: NullString,
         age: u8,
     }
@@ -426,7 +426,7 @@ fn nullwidestring_count() {
     #[derive(BinRead)]
     #[br(big)]
     struct TestWideMan{
-        #[br(count = 7, pad_size_to = 14)]
+        #[br(count = 7)]
         name: NullWideString,
         age: u16,
     }

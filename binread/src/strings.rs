@@ -20,13 +20,24 @@ impl BinRead for Vec<NonZeroU8> {
         options: &ReadOptions,
         _: Self::Args,
     ) -> BinResult<Self> {
-        let bytes: Box<dyn Iterator<Item=Result<u8, io::Error>>> = match options.count {
-            None => Box::new(reader.bytes()),
-            Some(count) => Box::new(reader.bytes().take(count)),
-        };
-        bytes.take_while(|x| !matches!(x, Ok(0)))
-             .map(|x| Ok(x.map(|byte| unsafe { NonZeroU8::new_unchecked(byte) })?))
-             .collect()
+        let pos_start = reader.stream_pos()?;
+        let iter = reader
+            .bytes()
+            .take_while(|x| !matches!(x, Ok(0)))
+            .map(|x| Ok(x.map(|byte| unsafe { NonZeroU8::new_unchecked(byte) })?));
+        match options.count {
+            None => return iter.collect(),
+            Some(count) => {
+                let values = iter.take(count).collect();
+                let pos_end = reader.stream_pos()?;
+                if pos_start + count as u64 > pos_end {
+                    // skip bytes after '\0' (#49)
+                    let cur_pos = pos_start + count as u64 - pos_end;
+                    reader.seek(io::SeekFrom::Current(cur_pos as i64))?;
+                }
+                values
+            }
+        }
     }
 }
 
@@ -135,19 +146,30 @@ impl BinRead for Vec<NonZeroU16> {
         _: Self::Args,
     ) -> BinResult<Self> {
         let mut values = vec![];
+        let mut num_of_u16 = 0usize;
 
         loop {
             if let Some(count) = options.count {
                 if values.len() >= count {
-                    return Ok(values);
+                    break;
                 }
             }
             let val = <u16>::read_options(reader, options, ())?;
+            num_of_u16 += 1;
             if val == 0 {
-                return Ok(values);
+                break;
             }
             values.push(unsafe { NonZeroU16::new_unchecked(val) });
         }
+
+        if let Some(count) = options.count {
+            if num_of_u16 < count {
+                // skip bytes after '\0' (#49)
+                let cur_pos = (count - num_of_u16) * core::mem::size_of::<u16>();
+                reader.seek(io::SeekFrom::Current(cur_pos as i64))?;
+            }
+        }
+        return Ok(values);
     }
 }
 
