@@ -1,3 +1,7 @@
+# The binread crate has been superseded by [binrw](https://github.com/jam1garner/binrw), which is the same thing but supports both reads *and* writes! [Upgrade to binrw today!](https://github.com/jam1garner/binrw)
+
+---
+
 # binread
 
 [![tests](https://github.com/jam1garner/binread/actions/workflows/cargo_tests.yml/badge.svg)](https://github.com/jam1garner/binread/actions/workflows/cargo_tests.yml)
