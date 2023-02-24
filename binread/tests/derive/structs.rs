@@ -1,7 +1,7 @@
 use binread::{
     derive_binread,
     io::{Cursor, Read, Seek, SeekFrom},
-    BinRead, BinResult, FilePtr, NullString, ReadOptions,
+    BinRead, BinResult, FilePtr, NullString, ReadOptions, NullWideString,
 };
 
 #[test]
@@ -399,4 +399,45 @@ fn tuple_calc_temp_field() {
     // This also indirectly checks that `temp` is actually working since
     // compilation would fail if it weren’t due to missing a second item
     assert_eq!(result, Test(5u32));
+}
+
+#[test]
+fn nullstring_count() {
+    #[derive(BinRead)]
+    struct TestMan{
+        #[br(count = 15)]
+        name: NullString,
+        age: u8,
+    }
+
+    let mut charlotte_bin = Cursor::new("Charlotte\0\0\0\0\0\0\x18");
+    let charlotte = TestMan::read(&mut charlotte_bin).unwrap();
+    assert_eq!(&*charlotte.name, b"Charlotte");
+    assert_eq!(charlotte.age, 24);
+
+    let mut longname_bin = Cursor::new("Zinjanthropuses\x07");
+    let longname = TestMan::read(&mut longname_bin).unwrap();
+    assert_eq!(&*longname.name, b"Zinjanthropuses");
+    assert_eq!(longname.age, 7);
+}
+
+#[test]
+fn nullwidestring_count() {
+    #[derive(BinRead)]
+    #[br(big)]
+    struct TestWideMan{
+        #[br(count = 7)]
+        name: NullWideString,
+        age: u16,
+    }
+
+    let mut mike_bin = Cursor::new(b"\0M\0i\0k\0e\0\0\0\0\0\0\0\x1e");
+    let mike = TestWideMan::read(&mut mike_bin).unwrap();
+    assert_eq!(mike.name.into_string(), "Mike");
+    assert_eq!(mike.age, 30);
+
+    let mut long16name_bin = Cursor::new("\0a\0a\0a\0a\0a\0a\0a\0\x64");
+    let longname = TestWideMan::read(&mut long16name_bin).unwrap();
+    assert_eq!(longname.name.into_string(), "aaaaaaa");
+    assert_eq!(longname.age, 100);
 }
